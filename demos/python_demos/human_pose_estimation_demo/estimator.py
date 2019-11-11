@@ -1,23 +1,5 @@
-#!/usr/bin/env python
-"""
- Copyright (c) 2019 Intel Corporation
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
 import numpy as np
 import copy
-import accessify
 from accessify import private
 
 import cv2
@@ -58,47 +40,33 @@ def extract_keypoints(heatmap, min_confidence=-100):
 
 
 def affine_transform(pt, t):
-        new_pt = np.array([pt[0], pt[1], 1.])
-        new_pt = np.dot(t, new_pt)
-        return new_pt[:2]
+        transformed_point = np.dot(t, [pt[0], pt[1], 1.])[:2]
+        return transformed_point
 
 
-class SinglePersonRandomAffineTransform(object):
-    def __init__(self, scale=0.35, rotate=45, mode='train', input_weight=288, input_height=384, stride=8):
+class TransformedCrop(object):
+    def __init__(self, scale=0.35, input_weight=288, input_height=384, stride=8):
         self._num_keypoints = 17
-        self._mode = mode
         self._scale = scale
-        self._rotate = rotate
         self._weight = input_weight
         self._height = input_height
         self._stride = stride
-        self.infer_time = -1
-
 
     def __call__(self, sample):
         s = sample['scale']
         c = sample['center']
-        r = sample['rotate']
 
-        trans, _ = self.get_affine_transform(c, s, r, [self._weight, self._height])
-        input = cv2.warpAffine(sample['image'], trans, (self._weight, self._height), flags=cv2.INTER_LINEAR)
+        trans, _ = self.get_trasformation_matrix(c, s, [self._weight, self._height])
+        transformed_image = cv2.warpAffine(sample['image'], trans, (self._weight, self._height), flags=cv2.INTER_LINEAR)
         sample['trans'] = trans
-        if self._mode == 'train':
-            for id in range(self._num_keypoints):
-                sample['keypoints'][3 * id: 3 * id + 2] = affine_transform(sample['keypoints'][3 * id: 3 * id + 2], trans)
-        else:
-            sample['rev_trans'] = self.get_affine_transform(c, s, r, [36, 48])[1]
+        sample['rev_trans'] = self.get_trasformation_matrix(c, s, [36, 48])[1]
 
-        sample['image'] = input
+        sample['image'] = transformed_image
 
         return sample
 
     @staticmethod
-    def rotation(point, r):
-        r = np.pi * r / 180
-        return [point[0] * np.cos(r) - point[1] * np.sin(r), point[0] * np.sin(r) + point[1] * np.cos(r)]
-
-    def get_affine_transform(self, center, scale, rotate, output_size, key=0):
+    def get_trasformation_matrix(center, scale, output_size):
 
         w, h = scale * 200
         points = np.zeros((3, 2), dtype=np.float32)
@@ -108,13 +76,12 @@ class SinglePersonRandomAffineTransform(object):
         transformed_points[1, :] = [output_size[0] * 0.5, output_size[1] * 0.5 - output_size[0] * 0.5]
         transformed_points[2, :] = [0, output_size[1] * 0.5]
 
-        shift_y = self.rotation([0, - w * 0.5], rotate)
-        shift_x = self.rotation([- w * 0.5, 0], rotate)
+        shift_y = [0, - w * 0.5]
+        shift_x = [- w * 0.5, 0]
 
         points[0, :] = center
         points[1, :] = center + shift_y
         points[2, :] = center + shift_x
-
 
         rev_trans = cv2.getAffineTransform(np.float32(transformed_points), np.float32(points))
 
@@ -134,7 +101,8 @@ class HumanPoseEstimator(object):
         self.input_layer_name = next(iter(self.model.inputs))
         self.output_layer_name = next(iter(self.model.outputs))
         _, _, self.input_w, self.input_h = self.model.inputs[self.input_layer_name].shape
-        self._transform = SinglePersonRandomAffineTransform(mode='val')
+        self._transform = TransformedCrop()
+        self.infer_time = -1
 
     @private
     def preprocess(self, img, bbox):
@@ -142,7 +110,6 @@ class HumanPoseEstimator(object):
         sample = {
             'image': img,
             'bbox': bbox,
-            'rotate': 0,
             'scale': s,
             'center': c
         }
@@ -158,12 +125,12 @@ class HumanPoseEstimator(object):
         self.infer_time = ((cv2.getTickCount() - t0) / cv2.getTickFrequency())
         return output[self.output_layer_name][0]
 
-    @private
-    def postprocess(self, heatmaps, rev_trans):
+    @staticmethod
+    def postprocess(heatmaps, rev_trans):
         all_keypoints = [extract_keypoints(heatmap) for heatmap in heatmaps]
-        keypoints_translated = [affine_transform([kp[1][0], kp[1][1]], rev_trans) for kp in all_keypoints]
+        all_keypoints_transformed = [affine_transform([kp[1][0], kp[1][1]], rev_trans) for kp in all_keypoints]
 
-        return keypoints_translated
+        return all_keypoints_transformed
 
     def estimate(self, img, bbox):
         img = copy.copy(img)

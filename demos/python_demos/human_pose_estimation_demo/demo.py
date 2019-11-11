@@ -1,23 +1,5 @@
-#!/usr/bin/env python
-"""
- Copyright (c) 2019 Intel Corporation
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
 import argparse
 import cv2
-
 from detector import Detector
 from estimator import HumanPoseEstimator
 
@@ -57,6 +39,7 @@ class ImageReader(object):
         self.idx += 1
         return img
 
+
 class VideoReader(object):
     def __init__(self, file_name):
         self.file_name = file_name
@@ -76,6 +59,7 @@ class VideoReader(object):
         if not was_read:
             raise StopIteration
         return img
+
 
 def run_demo(args):
 
@@ -111,7 +95,7 @@ def run_demo(args):
                 cv2.circle(frame, (int(kpt[0]), int(kpt[1])), 3, colors[id_kpt], -1)
 
         cv2.putText(frame, 'fps: {} (fps_pose: {} / fps bbox: {})'.format(
-            str(int(1 / (DetectorPerson.infer_time + SingleHumanPoseEstimator.infer_time))),
+            str(int(1 / (DetectorPerson.infer_time + SingleHumanPoseEstimator.infer_time * len(human_poses)))),
             str(int(1 / SingleHumanPoseEstimator.infer_time)),
             str(int(1 / DetectorPerson.infer_time))), (50, 50), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 200))
 

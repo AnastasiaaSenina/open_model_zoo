@@ -1,19 +1,3 @@
-#!/usr/bin/env python
-"""
- Copyright (c) 2019 Intel Corporation
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
 import copy
 import cv2
 from accessify import private
@@ -22,15 +6,13 @@ from openvino.inference_engine import IENetwork, IECore
 
 
 class Detector(object):
-    def __init__(self, path_to_model_xml, path_to_model_bin, path_to_lib, label_class=15, std=0.5, dst=1, scale=None, thr=0.3):
+    def __init__(self, path_to_model_xml, path_to_model_bin, path_to_lib, label_class=15, scale=None, thr=0.3):
         self.model = IENetwork(model=path_to_model_xml, weights=path_to_model_bin)
         self.ie = IECore()
         self.ie.add_extension(path_to_lib, 'CPU')
         self._exec_model = self.ie.load_network(self.model, 'CPU')
         self._scale = scale
         self._thr = thr
-        self._std = std
-        self._dst = dst
         self._label_class = label_class
         self._input_layer_name = next(iter(self.model.inputs))
         self._output_layer_name = next(iter(self.model.outputs))
@@ -43,8 +25,8 @@ class Detector(object):
     def preprocess(self, img):
         self._h, self._w, _ = img.shape
         if self._h != self.input_h or self._w != self.input_w:
-            img = cv2.resize(img, dsize=(self.input_w, self.input_h), fy=self._h / self.input_h, fx=self._h / self.input_h)
-        img = (img - self._std) / self._dst
+            img = cv2.resize(img, dsize=(self.input_w, self.input_h), fy=self._h / self.input_h,
+                             fx=self._h / self.input_h)
         img = img.transpose(2, 0, 1)
         return img[None, ]
 

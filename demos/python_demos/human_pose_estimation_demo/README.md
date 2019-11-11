@@ -4,7 +4,7 @@ This demo showcases top-down pipeline for human pose estimation on video or imag
 
 # How It Works
 
-On the start-up, the application reads command line parameters and loads  detection person model and single human pose estimation model. Upon getting a frame from the OpenCV VideoCapture, then  demo executes top/down pipline for this frame and displays the results.
+On the start-up, the application reads command line parameters and loads  detection person model and single human pose estimation model. Upon getting a frame from the OpenCV VideoCapture, then  demo executes top/down pipeline for this frame and displays the results.
 
 # Running
 
@@ -33,7 +33,7 @@ optional arguments:
   --label-person LABEL_PERSON
                         Label of class person for detector
 ```
-To run the demo, you can use public or pre-trained models. To download the pre-trained models, use the OpenVINO [Model Downloader](../../tools/downloader/README.md) or go to [https://download.01.org/opencv/](https://download.01.org/opencv/).
+To run the demo, you can use public or pre-trained models. To download the pre-trained models, use the OpenVINO Model Downloader or go to [https://download.01.org/opencv/](https://download.01.org/opencv/).
 
 For example, to do inference on a CPU, run the following command:
 
@@ -41,4 +41,4 @@ For example, to do inference on a CPU, run the following command:
  python demo.py  --model-od-xml <path_to_dir__with_models>/MobileNetSSD_deploy.xml --model-od-bin <path_to_dir__with_models>/MobileNetSSD_deploy.bin --model-hpe-bin <path_to_dir__with_models>/single-human-pose-estimation-0001.bin --model-hpe-xml /home/inteladmin/single-human-pose-estimation-0001.xml --video <path_to_video>/back-passengers.avi --cpu_extension <path_to_lib>/libcpu_extension_avx2.so
 ```
 
-The demo uses OpenCV to display the resulting frame with estimated poses and text report in format summary FPS (FPS single human pose/ FPS detector).
+The demo uses OpenCV to display the resulting frame with estimated poses and text report in format summary FPS / FPS single human pose/ FPS detector.
